@@ -85,16 +85,18 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    // Moedas: aparecem 3 de cada vez
-    int coinInterval = 800 ~/ widget.gameConfig['coins'];
+    // DIMINUIR QUANTIDADE DE MOEDAS
+    // Antes: aparecia 3 moedas a cada 800ms
+    // Agora: aparece 1 moeda a cada 1200ms (menos moedas na tela)
+    int coinInterval = 1200; // Aumentado o intervalo
     coinTimer = Timer.periodic(Duration(milliseconds: coinInterval), (timer) {
       if (!isGameOver) {
-        addMultipleCoins(3); // Adiciona 3 moedas por vez
+        addSingleCoin(); // Mudado de addMultipleCoins(3) para addSingleCoin()
       }
     });
     
-    // Buffs: aparecem a cada 5 segundos
-    buffTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    // Buffs: aparecem a cada 7 segundos (um pouco mais raro)
+    buffTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
       if (!isGameOver) {
         addBuff();
       }
@@ -132,30 +134,36 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  // Nova função: adiciona apenas 1 moeda por vez
+  void addSingleCoin() {
+    double newX;
+    bool positionValid;
+    int attempts = 0;
+    
+    do {
+      positionValid = true;
+      newX = (random.nextDouble() - 0.5) * 1.6;
+      
+      for (var obstacle in obstacles) {
+        if ((obstacle['x'] - newX).abs() < 0.25 && obstacle['y'] > -0.4) {
+          positionValid = false;
+          break;
+        }
+      }
+      attempts++;
+      if (attempts > 10) break;
+    } while (!positionValid);
+    
+    coins.add({
+      'x': newX,
+      'y': -0.8,
+    });
+  }
+
+  // Função antiga (mantida por compatibilidade mas não usada)
   void addMultipleCoins(int count) {
     for (int i = 0; i < count; i++) {
-      double newX;
-      bool positionValid;
-      int attempts = 0;
-      
-      do {
-        positionValid = true;
-        newX = (random.nextDouble() - 0.5) * 1.6;
-        
-        for (var obstacle in obstacles) {
-          if ((obstacle['x'] - newX).abs() < 0.25 && obstacle['y'] > -0.4) {
-            positionValid = false;
-            break;
-          }
-        }
-        attempts++;
-        if (attempts > 10) break;
-      } while (!positionValid);
-      
-      coins.add({
-        'x': newX,
-        'y': -0.8,
-      });
+      addSingleCoin();
     }
   }
 
@@ -198,7 +206,6 @@ class _GameScreenState extends State<GameScreen> {
           (coin['x'] - carX).abs() < GameConstants.coinCollisionThreshold) {
         coinsToRemove.add(coin);
         
-        // Moedas valem mais com double score
         if (doubleScore) {
           coinsCollected += 2;
         } else {
@@ -237,7 +244,7 @@ class _GameScreenState extends State<GameScreen> {
       SnackBar(
         content: Text('✨ ${buff['name']} ativado! ✨'),
         backgroundColor: buff['color'],
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
     
@@ -362,15 +369,18 @@ class _GameScreenState extends State<GameScreen> {
     rightPressed = false;
   }
 
+  // ignore: deprecated_member_use
   void onKey(RawKeyEvent event) {
     if (isGameOver) return;
     
+    // ignore: deprecated_member_use
     if (event is RawKeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = true;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         rightPressed = true;
       }
+    // ignore: deprecated_member_use
     } else if (event is RawKeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = false;
@@ -395,11 +405,13 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         goBackToMenu();
         return false;
       },
+      // ignore: deprecated_member_use
       child: RawKeyboardListener(
         focusNode: FocusNode(),
         onKey: onKey,
@@ -435,7 +447,6 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                         Row(
                           children: [
-                            // Indicadores de buffs ativos
                             if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 16),
                             if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 16),
                             if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 16),

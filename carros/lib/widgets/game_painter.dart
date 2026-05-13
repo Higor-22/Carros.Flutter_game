@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 class GamePainter extends CustomPainter {
@@ -30,22 +29,18 @@ class GamePainter extends CustomPainter {
     double laneWidth = size.width;
     double laneHeight = size.height;
     
-    // Zoom reduzido
-    double zoomPercent = 0.80;
-    double gameWidth = laneWidth * zoomPercent;
-    double gameHeight = laneHeight * zoomPercent;
-    double offsetX = (laneWidth - gameWidth) / 2;
-    double offsetY = (laneHeight - gameHeight) / 2;
+    // REMOVIDO O ZOOM - SEM BORDA PRETA
+    // Agora ocupa a tela toda
+    double gameWidth = laneWidth;
+    double gameHeight = laneHeight;
+    double offsetX = 0;
+    double offsetY = 0;
     
-    // Fundo preto
-    Paint blackPaint = Paint()..color = Colors.black;
-    canvas.drawRect(Rect.fromLTWH(0, 0, laneWidth, laneHeight), blackPaint);
-    
-    // Estrada
+    // Desenhar fundo da estrada (sem borda preta)
     Paint roadPaint = Paint()..color = Colors.grey[800]!;
     canvas.drawRect(Rect.fromLTWH(offsetX, offsetY, gameWidth, gameHeight), roadPaint);
     
-    // Linhas da estrada
+    // Desenhar linhas da estrada
     Paint linePaint = Paint()..color = Colors.white..strokeWidth = 2;
     for (int i = 0; i < 3; i++) {
       double x = offsetX + gameWidth * (i + 1) / 4;
@@ -61,7 +56,7 @@ class GamePainter extends CustomPainter {
       Paint buffPaint = Paint()..color = buffColor;
       canvas.drawCircle(Offset(x, y), gameWidth / 20, buffPaint);
       
-      // Efeito brilhante
+      // ignore: deprecated_member_use
       Paint glowPaint = Paint()..color = buffColor.withOpacity(0.5);
       canvas.drawCircle(Offset(x, y), gameWidth / 15, glowPaint);
       
@@ -84,23 +79,24 @@ class GamePainter extends CustomPainter {
       );
     }
     
-    // Desenhar moedas
+    // Desenhar moedas (menos moedas na tela - tamanho menor)
     Paint coinPaint = Paint()..color = Colors.amber;
     for (var coin in coins) {
       double x = offsetX + (coin['x'] + 1) / 2 * gameWidth;
       double y = offsetY + (coin['y'] + 1) / 2 * gameHeight;
       
-      canvas.drawCircle(Offset(x, y), gameWidth / 28, coinPaint);
+      // Moedas um pouco menores para parecer que tem menos
+      canvas.drawCircle(Offset(x, y), gameWidth / 32, coinPaint);
       
       Paint coinDetailPaint = Paint()..color = Colors.amber[700]!;
-      canvas.drawCircle(Offset(x, y), gameWidth / 40, coinDetailPaint);
+      canvas.drawCircle(Offset(x, y), gameWidth / 45, coinDetailPaint);
       
-      final TextPainter textPainter = TextPainter(
+      TextPainter textPainter = TextPainter(
         text: const TextSpan(
           text: '🪙',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 10,
+            fontSize: 9,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -136,6 +132,7 @@ class GamePainter extends CustomPainter {
     
     // Efeito escudo
     if (hasShield) {
+      // ignore: deprecated_member_use
       Paint shieldPaint = Paint()..color = Colors.orange.withOpacity(0.5);
       canvas.drawCircle(
         Offset(offsetX + (carX + 1) / 2 * gameWidth, offsetY + gameHeight - gameHeight / 8 - 15),
@@ -146,6 +143,7 @@ class GamePainter extends CustomPainter {
     
     // Efeito imunidade
     if (isImmune) {
+      // ignore: deprecated_member_use
       Paint immunePaint = Paint()..color = Colors.purple.withOpacity(0.5);
       canvas.drawCircle(
         Offset(offsetX + (carX + 1) / 2 * gameWidth, offsetY + gameHeight - gameHeight / 8 - 15),
@@ -154,8 +152,9 @@ class GamePainter extends CustomPainter {
       );
     }
     
-    // Efeito double score (estrelas ao redor)
+    // Efeito double score
     if (doubleScore) {
+      // ignore: deprecated_member_use
       Paint starPaint = Paint()..color = Colors.amber.withOpacity(0.8);
       double centerX = offsetX + (carX + 1) / 2 * gameWidth;
       double centerY = offsetY + gameHeight - gameHeight / 8 - 15;
@@ -214,6 +213,7 @@ class GamePainter extends CustomPainter {
     
     // Game Over
     if (isGameOver) {
+      // ignore: deprecated_member_use
       Paint overlayPaint = Paint()..color = Colors.black.withOpacity(0.7);
       canvas.drawRect(Rect.fromLTWH(offsetX, offsetY, gameWidth, gameHeight), overlayPaint);
       
