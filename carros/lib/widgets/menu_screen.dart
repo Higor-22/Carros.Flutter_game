@@ -1,7 +1,6 @@
 import 'package:carros/widgets/game_constants.dart';
 import 'package:flutter/material.dart';
 import 'dart:io';
-import '../utils/game_constants.dart';
 import 'game_screen.dart';
 import 'shop_screen.dart';
 
