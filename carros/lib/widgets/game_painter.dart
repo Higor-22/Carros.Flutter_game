@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 class GamePainter extends CustomPainter {
@@ -30,16 +29,11 @@ class GamePainter extends CustomPainter {
     double laneWidth = size.width;
     double laneHeight = size.height;
     
-    // Zoom reduzido
-    double zoomPercent = 0.80;
-    double gameWidth = laneWidth * zoomPercent;
-    double gameHeight = laneHeight * zoomPercent;
-    double offsetX = (laneWidth - gameWidth) / 2;
-    double offsetY = (laneHeight - gameHeight) / 2;
-    
-    // Fundo preto
-    Paint blackPaint = Paint()..color = Colors.black;
-    canvas.drawRect(Rect.fromLTWH(0, 0, laneWidth, laneHeight), blackPaint);
+    // SEM BORDA PRETA - TELA CHEIA
+    double gameWidth = laneWidth;
+    double gameHeight = laneHeight;
+    double offsetX = 0;
+    double offsetY = 0;
     
     // Estrada
     Paint roadPaint = Paint()..color = Colors.grey[800]!;
@@ -61,7 +55,6 @@ class GamePainter extends CustomPainter {
       Paint buffPaint = Paint()..color = buffColor;
       canvas.drawCircle(Offset(x, y), gameWidth / 20, buffPaint);
       
-      // Efeito brilhante
       Paint glowPaint = Paint()..color = buffColor.withOpacity(0.5);
       canvas.drawCircle(Offset(x, y), gameWidth / 15, glowPaint);
       
@@ -90,17 +83,17 @@ class GamePainter extends CustomPainter {
       double x = offsetX + (coin['x'] + 1) / 2 * gameWidth;
       double y = offsetY + (coin['y'] + 1) / 2 * gameHeight;
       
-      canvas.drawCircle(Offset(x, y), gameWidth / 28, coinPaint);
+      canvas.drawCircle(Offset(x, y), gameWidth / 32, coinPaint);
       
       Paint coinDetailPaint = Paint()..color = Colors.amber[700]!;
-      canvas.drawCircle(Offset(x, y), gameWidth / 40, coinDetailPaint);
+      canvas.drawCircle(Offset(x, y), gameWidth / 45, coinDetailPaint);
       
       final TextPainter textPainter = TextPainter(
         text: const TextSpan(
           text: '🪙',
           style: TextStyle(
             color: Colors.black,
-            fontSize: 10,
+            fontSize: 9,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -131,48 +124,44 @@ class GamePainter extends CustomPainter {
       );
     }
     
-    // Desenhar carro com efeitos de buff
-    Paint carPaint = Paint()..color = carColor;
-    
-    // Efeito escudo
-    if (hasShield) {
-      Paint shieldPaint = Paint()..color = Colors.orange.withOpacity(0.5);
-      canvas.drawCircle(
-        Offset(offsetX + (carX + 1) / 2 * gameWidth, offsetY + gameHeight - gameHeight / 8 - 15),
-        gameWidth / 7,
-        shieldPaint,
-      );
-    }
-    
-    // Efeito imunidade
-    if (isImmune) {
-      Paint immunePaint = Paint()..color = Colors.purple.withOpacity(0.5);
-      canvas.drawCircle(
-        Offset(offsetX + (carX + 1) / 2 * gameWidth, offsetY + gameHeight - gameHeight / 8 - 15),
-        gameWidth / 6,
-        immunePaint,
-      );
-    }
-    
-    // Efeito double score (estrelas ao redor)
-    if (doubleScore) {
-      Paint starPaint = Paint()..color = Colors.amber.withOpacity(0.8);
-      double centerX = offsetX + (carX + 1) / 2 * gameWidth;
-      double centerY = offsetY + gameHeight - gameHeight / 8 - 15;
-      for (int i = 0; i < 8; i++) {
-        double angle = i * 3.14159 * 2 / 8;
-        double starX = centerX + cos(angle) * (gameWidth / 6);
-        double starY = centerY + sin(angle) * (gameWidth / 6);
-        canvas.drawCircle(Offset(starX, starY), gameWidth / 25, starPaint);
-      }
-    }
+    // ==================== CARRO DA PRIMEIRA VERSÃO (SIMPLES) ====================
     
     double carWidth = gameWidth / 10;
     double carHeight = gameHeight / 8;
     double carY = offsetY + gameHeight - carHeight - 15;
     double carCenterX = offsetX + (carX + 1) / 2 * gameWidth;
     
-    // Corpo do carro
+    // Efeitos dos buffs
+    if (hasShield) {
+      Paint shieldPaint = Paint()..color = Colors.orange.withOpacity(0.5);
+      canvas.drawCircle(
+        Offset(carCenterX, carY + carHeight / 2),
+        gameWidth / 6,
+        shieldPaint,
+      );
+    }
+    
+    if (isImmune) {
+      Paint immunePaint = Paint()..color = Colors.purple.withOpacity(0.5);
+      canvas.drawCircle(
+        Offset(carCenterX, carY + carHeight / 2),
+        gameWidth / 5.5,
+        immunePaint,
+      );
+    }
+    
+    if (doubleScore) {
+      Paint starPaint = Paint()..color = Colors.amber.withOpacity(0.8);
+      for (int i = 0; i < 8; i++) {
+        double angle = i * 3.14159 * 2 / 8;
+        double starX = carCenterX + cos(angle) * (gameWidth / 5);
+        double starY = carY + carHeight / 2 + sin(angle) * (gameWidth / 5);
+        canvas.drawCircle(Offset(starX, starY), gameWidth / 35, starPaint);
+      }
+    }
+    
+    // Corpo do carro (simples)
+    Paint carPaint = Paint()..color = carColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromCenter(
@@ -185,7 +174,7 @@ class GamePainter extends CustomPainter {
       carPaint,
     );
     
-    // Janelas
+    // Janelas do carro
     Paint windowPaint = Paint()..color = Colors.blue[300]!;
     canvas.drawRRect(
       RRect.fromRectAndRadius(

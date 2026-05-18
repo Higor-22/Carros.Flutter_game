@@ -42,7 +42,6 @@ class _GameScreenState extends State<GameScreen> {
   bool rightPressed = false;
   Timer? keyboardTimer;
   
-  // Efeitos dos buffs
   bool hasShield = false;
   bool isImmune = false;
   bool doubleScore = false;
@@ -85,16 +84,16 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    // Moedas: aparecem 3 de cada vez
-    int coinInterval = 800 ~/ widget.gameConfig['coins'];
+    // MOEDAS: Aparecem 2 moedas a cada 1000ms (1 segundo)
+    int coinInterval = 1000; // 1 segundo entre cada grupo de moedas
     coinTimer = Timer.periodic(Duration(milliseconds: coinInterval), (timer) {
       if (!isGameOver) {
-        addMultipleCoins(3); // Adiciona 3 moedas por vez
+        addMultipleCoins(2); // Adiciona 2 moedas por vez
       }
     });
     
-    // Buffs: aparecem a cada 5 segundos
-    buffTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+    // Buffs: aparecem a cada 7 segundos
+    buffTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
       if (!isGameOver) {
         addBuff();
       }
@@ -117,7 +116,6 @@ class _GameScreenState extends State<GameScreen> {
     }
     buffs.removeWhere((buff) => buff['y'] > 1.0);
     
-    // Pontuação com efeito de dobro
     if (doubleScore) {
       score += 2;
     } else {
@@ -132,6 +130,7 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
+  // Função que adiciona múltiplas moedas por vez
   void addMultipleCoins(int count) {
     for (int i = 0; i < count; i++) {
       double newX;
@@ -142,14 +141,24 @@ class _GameScreenState extends State<GameScreen> {
         positionValid = true;
         newX = (random.nextDouble() - 0.5) * 1.6;
         
+        // Verifica se não colide com obstáculos
         for (var obstacle in obstacles) {
           if ((obstacle['x'] - newX).abs() < 0.25 && obstacle['y'] > -0.4) {
             positionValid = false;
             break;
           }
         }
+        
+        // Verifica se não colide com outras moedas que serão adicionadas no mesmo grupo
+        for (int j = 0; j < i; j++) {
+          if (coins.length > j && (coins[j]['x'] - newX).abs() < 0.2) {
+            positionValid = false;
+            break;
+          }
+        }
+        
         attempts++;
-        if (attempts > 10) break;
+        if (attempts > 20) break;
       } while (!positionValid);
       
       coins.add({
@@ -198,7 +207,6 @@ class _GameScreenState extends State<GameScreen> {
           (coin['x'] - carX).abs() < GameConstants.coinCollisionThreshold) {
         coinsToRemove.add(coin);
         
-        // Moedas valem mais com double score
         if (doubleScore) {
           coinsCollected += 2;
         } else {
@@ -237,7 +245,7 @@ class _GameScreenState extends State<GameScreen> {
       SnackBar(
         content: Text('✨ ${buff['name']} ativado! ✨'),
         backgroundColor: buff['color'],
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
       ),
     );
     
@@ -362,15 +370,18 @@ class _GameScreenState extends State<GameScreen> {
     rightPressed = false;
   }
 
+  // ignore: deprecated_member_use
   void onKey(RawKeyEvent event) {
     if (isGameOver) return;
     
+    // ignore: deprecated_member_use
     if (event is RawKeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = true;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         rightPressed = true;
       }
+    // ignore: deprecated_member_use
     } else if (event is RawKeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = false;
@@ -395,11 +406,13 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         goBackToMenu();
         return false;
       },
+      // ignore: deprecated_member_use
       child: RawKeyboardListener(
         focusNode: FocusNode(),
         onKey: onKey,
@@ -418,42 +431,42 @@ class _GameScreenState extends State<GameScreen> {
               color: Colors.black,
               child: Column(
                 children: [
+                  // Header SUPER COMPACTO
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     color: Colors.grey[900],
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
                           children: [
                             Text('👤 ${widget.playerName}',
-                                style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                style: const TextStyle(color: Colors.white, fontSize: 9)),
+                            const SizedBox(width: 8),
                             Text('🎮 ${widget.difficulty}',
-                                style: TextStyle(color: widget.gameConfig['color'], fontSize: 10)),
+                                style: TextStyle(color: widget.gameConfig['color'], fontSize: 9)),
                           ],
                         ),
                         Row(
                           children: [
-                            // Indicadores de buffs ativos
-                            if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 16),
-                            if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 16),
-                            if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 16),
-                            const SizedBox(width: 5),
+                            if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 12),
+                            if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 12),
+                            if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 12),
+                            const SizedBox(width: 4),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.amber,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.monetization_on, size: 12, color: Colors.black),
+                                  const Icon(Icons.monetization_on, size: 10, color: Colors.black),
                                   const SizedBox(width: 2),
                                   Text(
                                     '$coinsCollected',
                                     style: const TextStyle(
-                                      fontSize: 10,
+                                      fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.black,
                                     ),
@@ -461,25 +474,25 @@ class _GameScreenState extends State<GameScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 5),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.blue,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '🏆 ${score ~/ 10}',
                                 style: const TextStyle(
-                                  fontSize: 10,
+                                  fontSize: 9,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 5),
                             IconButton(
-                              icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 18),
+                              icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 16),
                               onPressed: goBackToMenu,
                               tooltip: 'Voltar ao Menu',
                               padding: EdgeInsets.zero,
@@ -491,6 +504,7 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                   
+                  // Área do jogo
                   Expanded(
                     child: Focus(
                       autofocus: true,
@@ -511,8 +525,9 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                   
+                  // Controles
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                     color: Colors.grey[900],
                     child: Column(
                       children: [
@@ -520,40 +535,39 @@ class _GameScreenState extends State<GameScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_left, size: 35, color: Colors.white),
+                              icon: const Icon(Icons.arrow_left, size: 30, color: Colors.white),
                               onPressed: isGameOver ? null : () {
                                 setState(() {
                                   carX = (carX - 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
                                 });
                               },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
-                            const Text('←  ARRASTE  →',
-                                style: TextStyle(color: Colors.white70, fontSize: 10)),
+                            const Text('←  →',
+                                style: TextStyle(color: Colors.white70, fontSize: 8)),
                             IconButton(
-                              icon: const Icon(Icons.arrow_right, size: 35, color: Colors.white),
+                              icon: const Icon(Icons.arrow_right, size: 30, color: Colors.white),
                               onPressed: isGameOver ? null : () {
                                 setState(() {
                                   carX = (carX + 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
                                 });
                               },
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 3),
                         Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[800],
-                            borderRadius: BorderRadius.circular(6),
-                          ),
+                          padding: const EdgeInsets.all(2),
                           child: const Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.keyboard, size: 12, color: Colors.white70),
-                              SizedBox(width: 4),
+                              Icon(Icons.keyboard, size: 10, color: Colors.white70),
+                              SizedBox(width: 3),
                               Text(
-                                'SETAS do teclado',
-                                style: TextStyle(color: Colors.white70, fontSize: 9),
+                                '←  →',
+                                style: TextStyle(color: Colors.white70, fontSize: 8),
                               ),
                             ],
                           ),
