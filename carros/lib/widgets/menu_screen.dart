@@ -1,6 +1,7 @@
+import 'dart:io';
+
 import 'package:carros/widgets/game_constants.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 import 'game_screen.dart';
 import 'shop_screen.dart';
 
@@ -27,9 +28,6 @@ class _MenuScreenState extends State<MenuScreen> {
     if (GameConstants.cars.isNotEmpty && !GameConstants.cars[0]['owned']) {
       GameConstants.cars[0]['owned'] = true;
     }
-    if (_selectedCarIndex >= GameConstants.cars.length) {
-      _selectedCarIndex = 0;
-    }
   }
 
   void _updateCoins(int coins) {
@@ -44,12 +42,6 @@ class _MenuScreenState extends State<MenuScreen> {
         const SnackBar(content: Text('Digite seu nome!')),
       );
       return;
-    }
-    
-    if (!GameConstants.cars[_selectedCarIndex]['owned']) {
-      setState(() {
-        _selectedCarIndex = 0;
-      });
     }
     
     Navigator.push(
@@ -88,15 +80,6 @@ class _MenuScreenState extends State<MenuScreen> {
           _selectedCarIndex = result['selectedCarIndex'] as int;
         }
       });
-      
-      String selectedCarName = GameConstants.cars[_selectedCarIndex]['name'] as String;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🚗 Agora usando: $selectedCarName'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -126,8 +109,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int carIndex = _selectedCarIndex < GameConstants.cars.length ? _selectedCarIndex : 0;
-    final Map<String, dynamic> selectedCar = GameConstants.cars[carIndex];
+    final Map<String, dynamic> selectedCar = GameConstants.cars[_selectedCarIndex];
     
     return Scaffold(
       body: Container(
@@ -144,14 +126,35 @@ class _MenuScreenState extends State<MenuScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Botão sair (sem a faixa amarela)
+                // Header com moedas e botão sair
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 30),
                       onPressed: _quitGame,
                       tooltip: 'Sair do Jogo',
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.amber,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.monetization_on, size: 20, color: Colors.black),
+                          const SizedBox(width: 5),
+                          Text(
+                            '$_totalCoins',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -169,7 +172,6 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                 ),
                 
-                // Carro selecionado
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

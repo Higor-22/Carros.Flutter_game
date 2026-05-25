@@ -11,6 +11,7 @@ class GamePainter extends CustomPainter {
   final bool hasShield;
   final bool isImmune;
   final bool doubleScore;
+  final bool hasSpeed; // Adicionado
 
   GamePainter({
     required this.carX,
@@ -22,6 +23,7 @@ class GamePainter extends CustomPainter {
     required this.hasShield,
     required this.isImmune,
     required this.doubleScore,
+    required this.hasSpeed, // Adicionado
   });
 
   @override
@@ -124,12 +126,24 @@ class GamePainter extends CustomPainter {
       );
     }
     
-    // ==================== CARRO DA PRIMEIRA VERSÃO (SIMPLES) ====================
+    // ==================== CARRO TAMANHO E MODELO ORIGINAL ====================
     
-    double carWidth = gameWidth / 10;
-    double carHeight = gameHeight / 8;
+    double carWidth = gameWidth / 9;
+    double carHeight = gameHeight / 7;
     double carY = offsetY + gameHeight - carHeight - 15;
     double carCenterX = offsetX + (carX + 1) / 2 * gameWidth;
+    
+    // Efeito de velocidade (rastro)
+    if (hasSpeed) {
+      Paint speedPaint = Paint()..color = Colors.cyan.withOpacity(0.3);
+      for (int i = 0; i < 3; i++) {
+        canvas.drawCircle(
+          Offset(carCenterX, carY + carHeight / 2 + i * 5),
+          gameWidth / 8,
+          speedPaint,
+        );
+      }
+    }
     
     // Efeitos dos buffs
     if (hasShield) {
@@ -160,7 +174,7 @@ class GamePainter extends CustomPainter {
       }
     }
     
-    // Corpo do carro (simples)
+    // Corpo do carro
     Paint carPaint = Paint()..color = carColor;
     canvas.drawRRect(
       RRect.fromRectAndRadius(

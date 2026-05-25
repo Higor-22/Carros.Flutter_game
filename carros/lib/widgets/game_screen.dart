@@ -45,9 +45,11 @@ class _GameScreenState extends State<GameScreen> {
   bool hasShield = false;
   bool isImmune = false;
   bool doubleScore = false;
+  bool hasSpeed = false; // Novo buff de velocidade
   Timer? shieldTimer;
   Timer? immuneTimer;
   Timer? doubleScoreTimer;
+  Timer? speedTimer;
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _GameScreenState extends State<GameScreen> {
     hasShield = false;
     isImmune = false;
     doubleScore = false;
+    hasSpeed = false;
 
     gameTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (!isGameOver) {
@@ -84,15 +87,13 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    // MOEDAS: Aparecem 2 moedas a cada 1000ms (1 segundo)
-    int coinInterval = 1000; // 1 segundo entre cada grupo de moedas
+    int coinInterval = 1000;
     coinTimer = Timer.periodic(Duration(milliseconds: coinInterval), (timer) {
       if (!isGameOver) {
-        addMultipleCoins(2); // Adiciona 2 moedas por vez
+        addMultipleCoins(2);
       }
     });
     
-    // Buffs: aparecem a cada 7 segundos
     buffTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
       if (!isGameOver) {
         addBuff();
@@ -101,18 +102,26 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void moveObjects() {
+    // Velocidade base
+    double currentSpeed = widget.gameConfig['speed'] / 50;
+    
+    // Se tem buff de velocidade, aumenta a velocidade em 50%
+    if (hasSpeed) {
+      currentSpeed = currentSpeed * 1.5;
+    }
+    
     for (var obstacle in obstacles) {
-      obstacle['y'] += widget.gameConfig['speed'] / 50;
+      obstacle['y'] += currentSpeed;
     }
     obstacles.removeWhere((obstacle) => obstacle['y'] > 1.0);
     
     for (var coin in coins) {
-      coin['y'] += widget.gameConfig['speed'] / 50;
+      coin['y'] += currentSpeed;
     }
     coins.removeWhere((coin) => coin['y'] > 1.0);
     
     for (var buff in buffs) {
-      buff['y'] += widget.gameConfig['speed'] / 50;
+      buff['y'] += currentSpeed;
     }
     buffs.removeWhere((buff) => buff['y'] > 1.0);
     
@@ -130,7 +139,6 @@ class _GameScreenState extends State<GameScreen> {
     });
   }
 
-  // Função que adiciona múltiplas moedas por vez
   void addMultipleCoins(int count) {
     for (int i = 0; i < count; i++) {
       double newX;
@@ -141,7 +149,6 @@ class _GameScreenState extends State<GameScreen> {
         positionValid = true;
         newX = (random.nextDouble() - 0.5) * 1.6;
         
-        // Verifica se não colide com obstáculos
         for (var obstacle in obstacles) {
           if ((obstacle['x'] - newX).abs() < 0.25 && obstacle['y'] > -0.4) {
             positionValid = false;
@@ -149,7 +156,6 @@ class _GameScreenState extends State<GameScreen> {
           }
         }
         
-        // Verifica se não colide com outras moedas que serão adicionadas no mesmo grupo
         for (int j = 0; j < i; j++) {
           if (coins.length > j && (coins[j]['x'] - newX).abs() < 0.2) {
             positionValid = false;
@@ -250,6 +256,17 @@ class _GameScreenState extends State<GameScreen> {
     );
     
     switch(effect) {
+      case 'speed':
+        hasSpeed = true;
+        speedTimer?.cancel();
+        speedTimer = Timer(Duration(seconds: duration), () {
+          hasSpeed = false;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('⚡ Velocidade acabou!'), backgroundColor: Colors.grey),
+          );
+        });
+        break;
+        
       case 'shield':
         hasShield = true;
         shieldTimer?.cancel();
@@ -370,18 +387,15 @@ class _GameScreenState extends State<GameScreen> {
     rightPressed = false;
   }
 
-  // ignore: deprecated_member_use
   void onKey(RawKeyEvent event) {
     if (isGameOver) return;
     
-    // ignore: deprecated_member_use
     if (event is RawKeyDownEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = true;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
         rightPressed = true;
       }
-    // ignore: deprecated_member_use
     } else if (event is RawKeyUpEvent) {
       if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
         leftPressed = false;
@@ -400,19 +414,18 @@ class _GameScreenState extends State<GameScreen> {
     shieldTimer?.cancel();
     immuneTimer?.cancel();
     doubleScoreTimer?.cancel();
+    speedTimer?.cancel();
     stopKeyboardControl();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
     return WillPopScope(
       onWillPop: () async {
         goBackToMenu();
         return false;
       },
-      // ignore: deprecated_member_use
       child: RawKeyboardListener(
         focusNode: FocusNode(),
         onKey: onKey,
@@ -431,7 +444,7 @@ class _GameScreenState extends State<GameScreen> {
               color: Colors.black,
               child: Column(
                 children: [
-                  // Header SUPER COMPACTO
+                  // Header SUPER COMPACTO (sem faixa amarela)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     color: Colors.grey[900],
@@ -449,6 +462,7 @@ class _GameScreenState extends State<GameScreen> {
                         ),
                         Row(
                           children: [
+                            if (hasSpeed) const Icon(Icons.speed, color: Colors.cyan, size: 12),
                             if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 12),
                             if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 12),
                             if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 12),
@@ -519,58 +533,41 @@ class _GameScreenState extends State<GameScreen> {
                           hasShield: hasShield,
                           isImmune: isImmune,
                           doubleScore: doubleScore,
+                          hasSpeed: hasSpeed,
                         ),
                         size: Size.infinite,
                       ),
                     ),
                   ),
                   
-                  // Controles
+                  // Controles (sem informação de teclado)
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                     color: Colors.grey[900],
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_left, size: 30, color: Colors.white),
-                              onPressed: isGameOver ? null : () {
-                                setState(() {
-                                  carX = (carX - 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                            const Text('←  →',
-                                style: TextStyle(color: Colors.white70, fontSize: 8)),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_right, size: 30, color: Colors.white),
-                              onPressed: isGameOver ? null : () {
-                                setState(() {
-                                  carX = (carX + 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
+                        IconButton(
+                          icon: const Icon(Icons.arrow_left, size: 30, color: Colors.white),
+                          onPressed: isGameOver ? null : () {
+                            setState(() {
+                              carX = (carX - 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
+                            });
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.keyboard, size: 10, color: Colors.white70),
-                              SizedBox(width: 3),
-                              Text(
-                                '←  →',
-                                style: TextStyle(color: Colors.white70, fontSize: 8),
-                              ),
-                            ],
-                          ),
+                        const Text('←  →',
+                            style: TextStyle(color: Colors.white70, fontSize: 8)),
+                        IconButton(
+                          icon: const Icon(Icons.arrow_right, size: 30, color: Colors.white),
+                          onPressed: isGameOver ? null : () {
+                            setState(() {
+                              carX = (carX + 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
+                            });
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
                         ),
                       ],
                     ),

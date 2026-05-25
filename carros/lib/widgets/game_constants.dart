@@ -16,9 +16,8 @@ class GameConstants {
     {'name': '💜 Carro Roxo', 'price': 300, 'color': Colors.purple, 'owned': false},
   ];
   
-  // Tipos de buffs
   static final List<Map<String, dynamic>> buffs = [
-    {'name': '⭐ Velocidade', 'color': Colors.cyan, 'effect': 'speed', 'duration': 5},
+    {'name': '⚡ Velocidade', 'color': Colors.cyan, 'effect': 'speed', 'duration': 5},
     {'name': '🛡️ Escudo', 'color': Colors.orange, 'effect': 'shield', 'duration': 5},
     {'name': '💨 Imune', 'color': Colors.purple, 'effect': 'immune', 'duration': 3},
     {'name': '🔷 Pontos Dobrados', 'color': Colors.lightBlue, 'effect': 'doubleScore', 'duration': 5},
