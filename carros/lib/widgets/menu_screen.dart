@@ -52,6 +52,9 @@ class _MenuScreenState extends State<MenuScreen> {
       });
     }
     
+    // PEGA O CAMINHO DA IMAGEM DO CARRO SELECIONADO
+    String imagePath = GameConstants.cars[_selectedCarIndex]['image'] ?? 'assets/sprite/Carte-carro-1.png';
+    
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -60,6 +63,7 @@ class _MenuScreenState extends State<MenuScreen> {
           difficulty: _difficulty,
           gameConfig: GameConstants.difficulties[_difficulty]!,
           carColor: GameConstants.cars[_selectedCarIndex]['color'] as Color,
+          carImagePath: imagePath,  // PASSA O CAMINHO DA IMAGEM
           onGameEnd: (coins) {
             _updateCoins(coins);
           },
@@ -144,7 +148,6 @@ class _MenuScreenState extends State<MenuScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Botão sair (sem a faixa amarela)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -169,7 +172,6 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                 ),
                 
-                // Carro selecionado
                 const SizedBox(height: 20),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

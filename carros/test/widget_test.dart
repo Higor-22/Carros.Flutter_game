@@ -78,7 +78,7 @@ void main() {
             difficulty: 'Fácil',
             gameConfig: GameConstants.difficulties['Fácil']!,
             carColor: Colors.red,
-            onGameEnd: (coins) {},
+            onGameEnd: (coins) {}, carImagePath: '',
           ),
         ),
       );
@@ -105,7 +105,7 @@ void main() {
             difficulty: 'Fácil',
             gameConfig: GameConstants.difficulties['Fácil']!,
             carColor: Colors.red,
-            onGameEnd: (coins) {},
+            onGameEnd: (coins) {}, carImagePath: '',
           ),
         ),
       );
@@ -132,7 +132,7 @@ void main() {
             difficulty: 'Fácil',
             gameConfig: GameConstants.difficulties['Fácil']!,
             carColor: Colors.red,
-            onGameEnd: (coins) {},
+            onGameEnd: (coins) {}, carImagePath: '',
           ),
         ),
       );
@@ -359,7 +359,7 @@ void main() {
             gameConfig: GameConstants.difficulties['Fácil']!,
             carColor: Colors.red,
             onGameEnd: (coins) {
-            },
+            }, carImagePath: '',
           ),
         ),
       );

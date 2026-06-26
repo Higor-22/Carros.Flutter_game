@@ -8,9 +8,12 @@ class GamePainter extends CustomPainter {
   final List<Map<String, dynamic>> buffs;
   final bool isGameOver;
   final Color carColor;
+  final String carImagePath;
   final bool hasShield;
   final bool isImmune;
   final bool doubleScore;
+  final bool hasSpeed;
+  final bool hasMagnet;
 
   GamePainter({
     required this.carX,
@@ -19,214 +22,153 @@ class GamePainter extends CustomPainter {
     required this.buffs,
     required this.isGameOver,
     required this.carColor,
+    required this.carImagePath,
     required this.hasShield,
     required this.isImmune,
     required this.doubleScore,
+    required this.hasSpeed,
+    required this.hasMagnet,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    double laneWidth = size.width;
-    double laneHeight = size.height;
-    
-    // SEM BORDA PRETA - TELA CHEIA
-    double gameWidth = laneWidth;
-    double gameHeight = laneHeight;
-    double offsetX = 0;
-    double offsetY = 0;
+    double gameWidth = size.width;
+    double gameHeight = size.height;
     
     // Estrada
     Paint roadPaint = Paint()..color = Colors.grey[800]!;
-    canvas.drawRect(Rect.fromLTWH(offsetX, offsetY, gameWidth, gameHeight), roadPaint);
+    canvas.drawRect(Rect.fromLTWH(0, 0, gameWidth, gameHeight), roadPaint);
     
     // Linhas da estrada
     Paint linePaint = Paint()..color = Colors.white..strokeWidth = 2;
     for (int i = 0; i < 3; i++) {
-      double x = offsetX + gameWidth * (i + 1) / 4;
-      canvas.drawLine(Offset(x, offsetY), Offset(x, offsetY + gameHeight), linePaint);
+      double x = gameWidth * (i + 1) / 4;
+      canvas.drawLine(Offset(x, 0), Offset(x, gameHeight), linePaint);
     }
     
-    // Desenhar BUFFS
+    // BUFFS
     for (var buff in buffs) {
-      double x = offsetX + (buff['x'] + 1) / 2 * gameWidth;
-      double y = offsetY + (buff['y'] + 1) / 2 * gameHeight;
-      
+      double x = (buff['x'] + 1) / 2 * gameWidth;
+      double y = (buff['y'] + 1) / 2 * gameHeight;
       Color buffColor = buff['color'] as Color;
       Paint buffPaint = Paint()..color = buffColor;
       canvas.drawCircle(Offset(x, y), gameWidth / 20, buffPaint);
-      
       Paint glowPaint = Paint()..color = buffColor.withOpacity(0.5);
       canvas.drawCircle(Offset(x, y), gameWidth / 15, glowPaint);
       
+      // Nome do buff
       String buffName = buff['name'] as String;
-      TextPainter textPainter = TextPainter(
-        text: TextSpan(
-          text: buffName.split(' ')[0],
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      TextPainter tp = TextPainter(
+        text: TextSpan(text: buffName.split(' ')[0], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(x - textPainter.width / 2, y - textPainter.height / 2),
-      );
+      tp.layout();
+      tp.paint(canvas, Offset(x - tp.width / 2, y - tp.height / 2));
     }
     
-    // Desenhar moedas
+    // MOEDAS
     Paint coinPaint = Paint()..color = Colors.amber;
     for (var coin in coins) {
-      double x = offsetX + (coin['x'] + 1) / 2 * gameWidth;
-      double y = offsetY + (coin['y'] + 1) / 2 * gameHeight;
-      
+      double x = (coin['x'] + 1) / 2 * gameWidth;
+      double y = (coin['y'] + 1) / 2 * gameHeight;
       canvas.drawCircle(Offset(x, y), gameWidth / 32, coinPaint);
-      
       Paint coinDetailPaint = Paint()..color = Colors.amber[700]!;
       canvas.drawCircle(Offset(x, y), gameWidth / 45, coinDetailPaint);
-      
-      final TextPainter textPainter = TextPainter(
-        text: const TextSpan(
-          text: '🪙',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 9,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      );
-      textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(x - textPainter.width / 2, y - textPainter.height / 2),
-      );
     }
     
-    // Desenhar obstáculos
+    // OBSTÁCULOS
     Paint obstaclePaint = Paint()..color = Colors.red;
     for (var obstacle in obstacles) {
-      double x = offsetX + (obstacle['x'] + 1) / 2 * gameWidth;
-      double y = offsetY + (obstacle['y'] + 1) / 2 * gameHeight;
-      
+      double x = (obstacle['x'] + 1) / 2 * gameWidth;
+      double y = (obstacle['y'] + 1) / 2 * gameHeight;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: Offset(x, y),
-            width: gameWidth / 12,
-            height: gameHeight / 12,
-          ),
+          Rect.fromCenter(center: Offset(x, y), width: gameWidth / 12, height: gameHeight / 12),
           const Radius.circular(6),
         ),
         obstaclePaint,
       );
     }
     
-    // ==================== CARRO DA PRIMEIRA VERSÃO (SIMPLES) ====================
+    // ==================== CARRO COM SPRITE ====================
+    double carWidth = gameWidth / 5;
+    double carHeight = gameHeight / 4;
+    double carY = gameHeight - carHeight - 15;
+    double carCenterX = (carX + 1) / 2 * gameWidth;
     
-    double carWidth = gameWidth / 10;
-    double carHeight = gameHeight / 8;
-    double carY = offsetY + gameHeight - carHeight - 15;
-    double carCenterX = offsetX + (carX + 1) / 2 * gameWidth;
-    
-    // Efeitos dos buffs
+    // Efeitos visuais
     if (hasShield) {
       Paint shieldPaint = Paint()..color = Colors.orange.withOpacity(0.5);
-      canvas.drawCircle(
-        Offset(carCenterX, carY + carHeight / 2),
-        gameWidth / 6,
-        shieldPaint,
-      );
+      canvas.drawCircle(Offset(carCenterX, carY + carHeight / 2), gameWidth / 4.5, shieldPaint);
     }
-    
     if (isImmune) {
       Paint immunePaint = Paint()..color = Colors.purple.withOpacity(0.5);
-      canvas.drawCircle(
-        Offset(carCenterX, carY + carHeight / 2),
-        gameWidth / 5.5,
-        immunePaint,
-      );
+      canvas.drawCircle(Offset(carCenterX, carY + carHeight / 2), gameWidth / 4, immunePaint);
     }
-    
+    if (hasMagnet) {
+      Paint magnetPaint = Paint()..color = Colors.brown.withOpacity(0.4);
+      canvas.drawCircle(Offset(carCenterX, carY + carHeight / 2), gameWidth / 4.2, magnetPaint);
+    }
+    if (hasSpeed) {
+      Paint speedPaint = Paint()..color = Colors.cyan.withOpacity(0.3);
+      for (int i = 0; i < 3; i++) {
+        canvas.drawCircle(Offset(carCenterX, carY + carHeight / 2 + i * 5), gameWidth / 8, speedPaint);
+      }
+    }
     if (doubleScore) {
       Paint starPaint = Paint()..color = Colors.amber.withOpacity(0.8);
       for (int i = 0; i < 8; i++) {
         double angle = i * 3.14159 * 2 / 8;
-        double starX = carCenterX + cos(angle) * (gameWidth / 5);
-        double starY = carY + carHeight / 2 + sin(angle) * (gameWidth / 5);
-        canvas.drawCircle(Offset(starX, starY), gameWidth / 35, starPaint);
+        double starX = carCenterX + cos(angle) * (gameWidth / 4.5);
+        double starY = carY + carHeight / 2 + sin(angle) * (gameWidth / 4.5);
+        canvas.drawCircle(Offset(starX, starY), gameWidth / 40, starPaint);
       }
     }
     
-    // Corpo do carro (simples)
-    Paint carPaint = Paint()..color = carColor;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(carCenterX, carY),
-          width: carWidth,
-          height: carHeight,
+    // CARREGAR E DESENHAR A IMAGEM DO SPRITE
+    try {
+      final ImageProvider image = AssetImage(carImagePath);
+      final ImageStream stream = image.resolve(ImageConfiguration.empty);
+      
+      // Usar ImageStreamListener para carregar a imagem
+      stream.addListener(ImageStreamListener((info, _) {
+        canvas.drawImageRect(
+          info.image,
+          Rect.fromLTWH(0, 0, info.image.width.toDouble(), info.image.height.toDouble()),
+          Rect.fromCenter(
+            center: Offset(carCenterX, carY + carHeight / 2),
+            width: carWidth,
+            height: carHeight,
+          ),
+          Paint(),
+        );
+      }));
+    } catch (e) {
+      // FALLBACK: Se a imagem não carregar, desenha um carro colorido
+      Paint fallbackPaint = Paint()..color = carColor;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(center: Offset(carCenterX, carY + carHeight / 2), width: carWidth, height: carHeight),
+          const Radius.circular(8),
         ),
-        const Radius.circular(8),
-      ),
-      carPaint,
-    );
-    
-    // Janelas do carro
-    Paint windowPaint = Paint()..color = Colors.blue[300]!;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromCenter(
-          center: Offset(carCenterX, carY - carHeight / 4),
-          width: carWidth / 1.3,
-          height: carHeight / 3,
-        ),
-        const Radius.circular(4),
-      ),
-      windowPaint,
-    );
-    
-    // Faróis
-    Paint lightPaint = Paint()..color = Colors.yellow;
-    canvas.drawCircle(
-      Offset(carCenterX - carWidth / 2.5, carY - carHeight / 2.5),
-      carWidth / 10,
-      lightPaint,
-    );
-    canvas.drawCircle(
-      Offset(carCenterX + carWidth / 2.5, carY - carHeight / 2.5),
-      carWidth / 10,
-      lightPaint,
-    );
+        fallbackPaint,
+      );
+    }
     
     // Game Over
     if (isGameOver) {
       Paint overlayPaint = Paint()..color = Colors.black.withOpacity(0.7);
-      canvas.drawRect(Rect.fromLTWH(offsetX, offsetY, gameWidth, gameHeight), overlayPaint);
+      canvas.drawRect(Rect.fromLTWH(0, 0, gameWidth, gameHeight), overlayPaint);
       
-      final TextPainter textPainter = TextPainter(
-        text: const TextSpan(
-          text: 'GAME OVER',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      TextPainter textPainter = TextPainter(
+        text: const TextSpan(text: 'GAME OVER', style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
         textDirection: TextDirection.ltr,
       );
       textPainter.layout();
-      textPainter.paint(
-        canvas,
-        Offset(offsetX + gameWidth / 2 - textPainter.width / 2, offsetY + gameHeight / 2 - 30),
-      );
+      textPainter.paint(canvas, Offset(gameWidth / 2 - textPainter.width / 2, gameHeight / 2 - 30));
     }
   }
   
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

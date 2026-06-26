@@ -10,6 +10,7 @@ class GameScreen extends StatefulWidget {
   final String difficulty;
   final Map<String, dynamic> gameConfig;
   final Color carColor;
+  final String carImagePath;
   final Function(int) onGameEnd;
 
   const GameScreen({Key? key, 
@@ -17,6 +18,7 @@ class GameScreen extends StatefulWidget {
     required this.difficulty,
     required this.gameConfig,
     required this.carColor,
+    required this.carImagePath,
     required this.onGameEnd,
   }) : super(key: key);
 
@@ -45,14 +47,21 @@ class _GameScreenState extends State<GameScreen> {
   bool hasShield = false;
   bool isImmune = false;
   bool doubleScore = false;
+  bool hasSpeed = false;
+  bool hasMagnet = false;
   Timer? shieldTimer;
   Timer? immuneTimer;
   Timer? doubleScoreTimer;
+  Timer? speedTimer;
+  Timer? magnetTimer;
 
   @override
   void initState() {
     super.initState();
     startGame();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      startKeyboardControl();
+    });
   }
 
   void startGame() {
@@ -66,6 +75,8 @@ class _GameScreenState extends State<GameScreen> {
     hasShield = false;
     isImmune = false;
     doubleScore = false;
+    hasSpeed = false;
+    hasMagnet = false;
 
     gameTimer = Timer.periodic(const Duration(milliseconds: 50), (timer) {
       if (!isGameOver) {
@@ -84,15 +95,13 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
 
-    // MOEDAS: Aparecem 2 moedas a cada 1000ms (1 segundo)
-    int coinInterval = 1000; // 1 segundo entre cada grupo de moedas
+    int coinInterval = 1000;
     coinTimer = Timer.periodic(Duration(milliseconds: coinInterval), (timer) {
       if (!isGameOver) {
-        addMultipleCoins(2); // Adiciona 2 moedas por vez
+        addMultipleCoins(2);
       }
     });
     
-    // Buffs: aparecem a cada 7 segundos
     buffTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
       if (!isGameOver) {
         addBuff();
@@ -101,83 +110,57 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void moveObjects() {
-    for (var obstacle in obstacles) {
-      obstacle['y'] += widget.gameConfig['speed'] / 50;
+    double currentSpeed = widget.gameConfig['speed'] / 50;
+    if (hasSpeed) currentSpeed *= 1.5;
+
+    if (hasMagnet) {
+      for (var coin in coins) {
+        double diff = carX - (coin['x'] as double);
+        double attraction = (diff.abs() > 0.5) ? 0.25 : 0.15;
+        coin['x'] = (coin['x'] as double) + diff * attraction;
+        coin['x'] = (coin['x'] as double).clamp(-0.9, 0.9);
+      }
     }
-    obstacles.removeWhere((obstacle) => obstacle['y'] > 1.0);
-    
-    for (var coin in coins) {
-      coin['y'] += widget.gameConfig['speed'] / 50;
-    }
-    coins.removeWhere((coin) => coin['y'] > 1.0);
-    
-    for (var buff in buffs) {
-      buff['y'] += widget.gameConfig['speed'] / 50;
-    }
-    buffs.removeWhere((buff) => buff['y'] > 1.0);
-    
-    if (doubleScore) {
-      score += 2;
-    } else {
-      score++;
-    }
+
+    for (var o in obstacles) { o['y'] = (o['y'] as double) + currentSpeed; }
+    obstacles.removeWhere((o) => o['y'] > 1.0);
+    for (var c in coins) { c['y'] = (c['y'] as double) + currentSpeed; }
+    coins.removeWhere((c) => c['y'] > 1.0);
+    for (var b in buffs) { b['y'] = (b['y'] as double) + currentSpeed; }
+    buffs.removeWhere((b) => b['y'] > 1.0);
+
+    score += doubleScore ? 2 : 1;
   }
 
   void addObstacle() {
-    obstacles.add({
-      'x': (random.nextDouble() - 0.5) * 1.6,
-      'y': -0.8,
-    });
+    obstacles.add({'x': (random.nextDouble() - 0.5) * 1.6, 'y': -0.8});
   }
 
-  // Função que adiciona múltiplas moedas por vez
   void addMultipleCoins(int count) {
     for (int i = 0; i < count; i++) {
       double newX;
-      bool positionValid;
+      bool ok;
       int attempts = 0;
-      
       do {
-        positionValid = true;
+        ok = true;
         newX = (random.nextDouble() - 0.5) * 1.6;
-        
-        // Verifica se não colide com obstáculos
-        for (var obstacle in obstacles) {
-          if ((obstacle['x'] - newX).abs() < 0.25 && obstacle['y'] > -0.4) {
-            positionValid = false;
-            break;
-          }
+        for (var o in obstacles) {
+          if (((o['x'] as double) - newX).abs() < 0.25 && (o['y'] as double) > -0.4) { ok = false; break; }
         }
-        
-        // Verifica se não colide com outras moedas que serão adicionadas no mesmo grupo
-        for (int j = 0; j < i; j++) {
-          if (coins.length > j && (coins[j]['x'] - newX).abs() < 0.2) {
-            positionValid = false;
-            break;
-          }
-        }
-        
         attempts++;
         if (attempts > 20) break;
-      } while (!positionValid);
-      
-      coins.add({
-        'x': newX,
-        'y': -0.8,
-      });
+      } while (!ok);
+      coins.add({'x': newX, 'y': -0.8});
     }
   }
 
   void addBuff() {
-    int buffIndex = random.nextInt(GameConstants.buffs.length);
-    Map<String, dynamic> buff = GameConstants.buffs[buffIndex];
-    
-    double newX = (random.nextDouble() - 0.5) * 1.6;
-    
+    int idx = random.nextInt(GameConstants.buffs.length);
+    var buff = GameConstants.buffs[idx];
     buffs.add({
-      'x': newX,
+      'x': (random.nextDouble() - 0.5) * 1.6,
       'y': -0.8,
-      'type': buffIndex,
+      'type': idx,
       'name': buff['name'],
       'effect': buff['effect'],
       'duration': buff['duration'],
@@ -187,11 +170,10 @@ class _GameScreenState extends State<GameScreen> {
 
   void checkCollision() {
     if (isImmune || hasShield) return;
-    
-    for (var obstacle in obstacles) {
-      if (obstacle['y'] >= GameConstants.obstacleCollisionYMin && 
-          obstacle['y'] <= GameConstants.obstacleCollisionYMax &&
-          (obstacle['x'] - carX).abs() < GameConstants.collisionThreshold) {
+    for (var o in obstacles) {
+      if (o['y'] >= GameConstants.obstacleCollisionYMin &&
+          o['y'] <= GameConstants.obstacleCollisionYMax &&
+          (o['x'] - carX).abs() < GameConstants.collisionThreshold) {
         gameOver();
         break;
       }
@@ -199,87 +181,74 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void checkCoinCollection() {
-    List<Map<String, dynamic>> coinsToRemove = [];
-    
-    for (var coin in coins) {
-      if (coin['y'] >= GameConstants.coinCollisionYMin && 
-          coin['y'] <= GameConstants.coinCollisionYMax &&
-          (coin['x'] - carX).abs() < GameConstants.coinCollisionThreshold) {
-        coinsToRemove.add(coin);
-        
-        if (doubleScore) {
-          coinsCollected += 2;
-        } else {
-          coinsCollected++;
-        }
+    List<Map<String, dynamic>> toRemove = [];
+    for (var c in coins) {
+      if (c['y'] >= GameConstants.coinCollisionYMin &&
+          c['y'] <= GameConstants.coinCollisionYMax &&
+          (c['x'] - carX).abs() < GameConstants.coinCollisionThreshold) {
+        toRemove.add(c);
+        coinsCollected += doubleScore ? 2 : 1;
       }
     }
-    
-    for (var coin in coinsToRemove) {
-      coins.remove(coin);
-    }
+    for (var c in toRemove) { coins.remove(c); }
   }
 
   void checkBuffCollection() {
-    List<Map<String, dynamic>> buffsToRemove = [];
-    
-    for (var buff in buffs) {
-      if (buff['y'] >= GameConstants.buffCollisionYMin && 
-          buff['y'] <= GameConstants.buffCollisionYMax &&
-          (buff['x'] - carX).abs() < GameConstants.buffCollisionThreshold) {
-        buffsToRemove.add(buff);
-        applyBuff(buff);
+    List<Map<String, dynamic>> toRemove = [];
+    for (var b in buffs) {
+      if (b['y'] >= GameConstants.buffCollisionYMin &&
+          b['y'] <= GameConstants.buffCollisionYMax &&
+          (b['x'] - carX).abs() < GameConstants.buffCollisionThreshold) {
+        toRemove.add(b);
+        applyBuff(b);
       }
     }
-    
-    for (var buff in buffsToRemove) {
-      buffs.remove(buff);
-    }
+    for (var b in toRemove) { buffs.remove(b); }
   }
 
   void applyBuff(Map<String, dynamic> buff) {
     String effect = buff['effect'];
     int duration = buff['duration'];
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('✨ ${buff['name']} ativado! ✨'),
-        backgroundColor: buff['color'],
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    
-    switch(effect) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('✨ ${buff['name']} ativado! ✨'),
+      backgroundColor: buff['color'],
+      duration: const Duration(seconds: 2),
+    ));
+
+    switch (effect) {
+      case 'speed':
+        hasSpeed = true;
+        speedTimer = Timer(Duration(seconds: duration), () {
+          hasSpeed = false;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('⚡ Velocidade acabou!')));
+        });
+        break;
       case 'shield':
         hasShield = true;
-        shieldTimer?.cancel();
         shieldTimer = Timer(Duration(seconds: duration), () {
           hasShield = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🛡️ Escudo acabou!'), backgroundColor: Colors.grey),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🛡️ Escudo acabou!')));
         });
         break;
-        
       case 'immune':
         isImmune = true;
-        immuneTimer?.cancel();
         immuneTimer = Timer(Duration(seconds: duration), () {
           isImmune = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('💨 Imunidade acabou!'), backgroundColor: Colors.grey),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('💨 Imunidade acabou!')));
         });
         break;
-        
       case 'doubleScore':
         doubleScore = true;
-        doubleScoreTimer?.cancel();
         doubleScoreTimer = Timer(Duration(seconds: duration), () {
           doubleScore = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🔷 Pontos dobrados acabou!'), backgroundColor: Colors.grey),
-          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔷 Pontos dobrados acabou!')));
+        });
+        break;
+      case 'magnet':
+        hasMagnet = true;
+        magnetTimer = Timer(Duration(seconds: duration), () {
+          hasMagnet = false;
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🧲 Ímã acabou!')));
         });
         break;
     }
@@ -307,33 +276,15 @@ class _GameScreenState extends State<GameScreen> {
             Text('Jogador: ${widget.playerName}'),
             Text('Dificuldade: ${widget.difficulty}'),
             const SizedBox(height: 10),
-            Text('🏆 Pontuação: ${score ~/ 10}', 
-                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            Text('🪙 Moedas: $coinsCollected', 
-                 style: const TextStyle(fontSize: 18, color: Colors.amber)),
+            Text('🏆 Pontuação: ${score ~/ 10}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('🪙 Moedas: $coinsCollected', style: const TextStyle(fontSize: 18, color: Colors.amber)),
             const SizedBox(height: 20),
             const Text('O que deseja fazer?'),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              widget.onGameEnd(coinsCollected);
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('MENU PRINCIPAL'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              widget.onGameEnd(coinsCollected);
-              Navigator.pop(context);
-              setState(() {
-                startGame();
-              });
-            },
-            child: const Text('REINICIAR'),
-          ),
+          TextButton(onPressed: () { widget.onGameEnd(coinsCollected); Navigator.pop(context); Navigator.pop(context); }, child: const Text('MENU PRINCIPAL')),
+          ElevatedButton(onPressed: () { widget.onGameEnd(coinsCollected); Navigator.pop(context); setState(() { startGame(); }); }, child: const Text('REINICIAR')),
         ],
       ),
     );
@@ -353,12 +304,8 @@ class _GameScreenState extends State<GameScreen> {
     keyboardTimer = Timer.periodic(const Duration(milliseconds: 16), (timer) {
       if (!isGameOver) {
         setState(() {
-          if (leftPressed) {
-            carX = (carX - GameConstants.carMoveStep).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-          }
-          if (rightPressed) {
-            carX = (carX + GameConstants.carMoveStep).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-          }
+          if (leftPressed) carX = (carX - GameConstants.carMoveStep).clamp(GameConstants.carMinX, GameConstants.carMaxX);
+          if (rightPressed) carX = (carX + GameConstants.carMoveStep).clamp(GameConstants.carMinX, GameConstants.carMaxX);
         });
       }
     });
@@ -370,24 +317,14 @@ class _GameScreenState extends State<GameScreen> {
     rightPressed = false;
   }
 
-  // ignore: deprecated_member_use
   void onKey(RawKeyEvent event) {
     if (isGameOver) return;
-    
-    // ignore: deprecated_member_use
     if (event is RawKeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        leftPressed = true;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        rightPressed = true;
-      }
-    // ignore: deprecated_member_use
+      if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.keyA) leftPressed = true;
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight || event.logicalKey == LogicalKeyboardKey.keyD) rightPressed = true;
     } else if (event is RawKeyUpEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowLeft) {
-        leftPressed = false;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowRight) {
-        rightPressed = false;
-      }
+      if (event.logicalKey == LogicalKeyboardKey.arrowLeft || event.logicalKey == LogicalKeyboardKey.keyA) leftPressed = false;
+      if (event.logicalKey == LogicalKeyboardKey.arrowRight || event.logicalKey == LogicalKeyboardKey.keyD) rightPressed = false;
     }
   }
 
@@ -400,183 +337,107 @@ class _GameScreenState extends State<GameScreen> {
     shieldTimer?.cancel();
     immuneTimer?.cancel();
     doubleScoreTimer?.cancel();
+    speedTimer?.cancel();
+    magnetTimer?.cancel();
     stopKeyboardControl();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
-    return WillPopScope(
-      onWillPop: () async {
-        goBackToMenu();
-        return false;
-      },
-      // ignore: deprecated_member_use
-      child: RawKeyboardListener(
-        focusNode: FocusNode(),
-        onKey: onKey,
-        autofocus: true,
-        child: Scaffold(
-          body: GestureDetector(
-            onHorizontalDragUpdate: (details) {
-              if (!isGameOver) {
-                setState(() {
-                  double delta = details.delta.dx / 100;
-                  carX = (carX + delta).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-                });
-              }
-            },
-            child: Container(
-              color: Colors.black,
-              child: Column(
-                children: [
-                  // Header SUPER COMPACTO
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                    color: Colors.grey[900],
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            Text('👤 ${widget.playerName}',
-                                style: const TextStyle(color: Colors.white, fontSize: 9)),
-                            const SizedBox(width: 8),
-                            Text('🎮 ${widget.difficulty}',
-                                style: TextStyle(color: widget.gameConfig['color'], fontSize: 9)),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 12),
-                            if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 12),
-                            if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 12),
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.amber,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.monetization_on, size: 10, color: Colors.black),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    '$coinsCollected',
-                                    style: const TextStyle(
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '🏆 ${score ~/ 10}',
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 5),
-                            IconButton(
-                              icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 16),
-                              onPressed: goBackToMenu,
-                              tooltip: 'Voltar ao Menu',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  // Área do jogo
-                  Expanded(
-                    child: Focus(
-                      autofocus: true,
-                      child: CustomPaint(
-                        painter: GamePainter(
-                          carX: carX,
-                          obstacles: obstacles,
-                          coins: coins,
-                          buffs: buffs,
-                          isGameOver: isGameOver,
-                          carColor: widget.carColor,
-                          hasShield: hasShield,
-                          isImmune: isImmune,
-                          doubleScore: doubleScore,
-                        ),
-                        size: Size.infinite,
-                      ),
-                    ),
-                  ),
-                  
-                  // Controles
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                    color: Colors.grey[900],
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_left, size: 30, color: Colors.white),
-                              onPressed: isGameOver ? null : () {
-                                setState(() {
-                                  carX = (carX - 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                            const Text('←  →',
-                                style: TextStyle(color: Colors.white70, fontSize: 8)),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_right, size: 30, color: Colors.white),
-                              onPressed: isGameOver ? null : () {
-                                setState(() {
-                                  carX = (carX + 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX);
-                                });
-                              },
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                        Container(
-                          padding: const EdgeInsets.all(2),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.keyboard, size: 10, color: Colors.white70),
-                              SizedBox(width: 3),
-                              Text(
-                                '←  →',
-                                style: TextStyle(color: Colors.white70, fontSize: 8),
-                              ),
-                            ],
+    return RawKeyboardListener(
+      focusNode: FocusNode(),
+      onKey: onKey,
+      autofocus: true,
+      child: Scaffold(
+        body: GestureDetector(
+          onHorizontalDragUpdate: (details) {
+            if (!isGameOver) {
+              setState(() {
+                double delta = details.delta.dx / 100;
+                carX = (carX + delta).clamp(GameConstants.carMinX, GameConstants.carMaxX);
+              });
+            }
+          },
+          child: Container(
+            color: Colors.black,
+            child: Column(
+              children: [
+                // HEADER
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  color: Colors.grey[900],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('👤 ${widget.playerName}', style: const TextStyle(color: Colors.white, fontSize: 9)),
+                      Row(
+                        children: [
+                          if (hasSpeed) const Icon(Icons.speed, color: Colors.cyan, size: 12),
+                          if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 12),
+                          if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 12),
+                          if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 12),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(10)),
+                            child: Text('🪙 $coinsCollected', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black)),
                           ),
-                        ),
-                      ],
-                    ),
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(10)),
+                            child: Text('🏆 ${score ~/ 10}', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.exit_to_app, color: Colors.white, size: 16),
+                            onPressed: goBackToMenu,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                // ÁREA DO JOGO
+                Expanded(
+                  child: CustomPaint(
+                    painter: GamePainter(
+                      carX: carX,
+                      obstacles: obstacles,
+                      coins: coins,
+                      buffs: buffs,
+                      isGameOver: isGameOver,
+                      carColor: widget.carColor,
+                      carImagePath: widget.carImagePath,  // ← PASSA O CAMINHO DA IMAGEM
+                      hasShield: hasShield,
+                      isImmune: isImmune,
+                      doubleScore: doubleScore,
+                      hasSpeed: hasSpeed,
+                      hasMagnet: hasMagnet,
+                    ),
+                    size: Size.infinite,
+                  ),
+                ),
+                // CONTROLES
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  color: Colors.grey[900],
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_left, size: 35, color: Colors.white),
+                        onPressed: isGameOver ? null : () => setState(() => carX = (carX - 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX)),
+                      ),
+                      const Text('←  →', style: TextStyle(color: Colors.white70, fontSize: 10)),
+                      IconButton(
+                        icon: const Icon(Icons.arrow_right, size: 35, color: Colors.white),
+                        onPressed: isGameOver ? null : () => setState(() => carX = (carX + 0.1).clamp(GameConstants.carMinX, GameConstants.carMaxX)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ),
