@@ -19,6 +19,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/sprites/Corte-carro-1.png
-    - assets/sprites/Corte-carro-2.png
     - assets/sprites/Corte-carro-3.png
-    - assets/sprites/Corte-carro-4.png
+    - assets/sprites/Corte-carro-4.png  
