@@ -8,10 +8,10 @@ class GameConstants {
   };
   
   static List<Map<String, dynamic>> cars = [
-    {'name': '🚗 Carro 1', 'price': 0, 'color': Colors.red, 'owned': true, 'image': 'assets/sprite/Corte-carro-1.png'},
-    {'name': '🚙 Carro 2', 'price': 50, 'color': Colors.blue, 'owned': false, 'image': 'assets/sprite/Corte-carro-2.png'},
-    {'name': '🏎️ Carro 3', 'price': 100, 'color': Colors.green, 'owned': false, 'image': 'assets/sprite/Corte-carro-3.png'},
-    {'name': '🚕 Carro 4', 'price': 150, 'color': Colors.yellow, 'owned': false, 'image': 'assets/sprite/Corte-carro-4.png'},
+    {'name': '🚗 Carro Vermelho', 'price': 0, 'color': Colors.red, 'owned': true, 'image': 'assets/sprites/Corte-carro-1.png'},
+    {'name': '🚙 Carro Azul', 'price': 50, 'color': Colors.blue, 'owned': false, 'image': 'assets/sprites/Corte-carro-2.png'},
+    {'name': '🏎️ Carro Verde', 'price': 100, 'color': Colors.green, 'owned': false, 'image': 'assets/sprites/Corte-carro-3.png'},
+    {'name': '🚕 Carro Amarelo', 'price': 150, 'color': Colors.yellow, 'owned': false, 'image': 'assets/sprites/Corte-carro-4.png'},
   ];
   
   static final List<Map<String, dynamic>> buffs = [

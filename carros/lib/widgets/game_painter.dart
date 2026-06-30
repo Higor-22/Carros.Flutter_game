@@ -30,6 +30,26 @@ class GamePainter extends CustomPainter {
     required this.hasMagnet,
   });
 
+  // Cache para a imagem carregada
+  static ImageInfo? _cachedImage;
+  static String? _cachedPath;
+
+  void _loadImage() {
+    if (_cachedPath == carImagePath && _cachedImage != null) return;
+    
+    try {
+      final ImageProvider image = AssetImage(carImagePath);
+      final ImageStream stream = image.resolve(ImageConfiguration.empty);
+      
+      stream.addListener(ImageStreamListener((info, _) {
+        _cachedImage = info;
+        _cachedPath = carImagePath;
+      }));
+    } catch (e) {
+      print('Erro ao carregar imagem: $carImagePath');
+    }
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     double gameWidth = size.width;
@@ -46,27 +66,39 @@ class GamePainter extends CustomPainter {
       canvas.drawLine(Offset(x, 0), Offset(x, gameHeight), linePaint);
     }
     
-    // BUFFS
+    // ==================== BUFFS ====================
     for (var buff in buffs) {
       double x = (buff['x'] + 1) / 2 * gameWidth;
       double y = (buff['y'] + 1) / 2 * gameHeight;
       Color buffColor = buff['color'] as Color;
-      Paint buffPaint = Paint()..color = buffColor;
-      canvas.drawCircle(Offset(x, y), gameWidth / 20, buffPaint);
-      Paint glowPaint = Paint()..color = buffColor.withOpacity(0.5);
-      canvas.drawCircle(Offset(x, y), gameWidth / 15, glowPaint);
       
-      // Nome do buff
+      Paint glowPaint = Paint()..color = buffColor.withOpacity(0.3);
+      canvas.drawCircle(Offset(x, y), gameWidth / 12, glowPaint);
+      
+      Paint buffPaint = Paint()..color = buffColor;
+      canvas.drawCircle(Offset(x, y), gameWidth / 18, buffPaint);
+      
+      Paint borderPaint = Paint()..color = Colors.white..style = PaintingStyle.stroke..strokeWidth = 2;
+      canvas.drawCircle(Offset(x, y), gameWidth / 18, borderPaint);
+      
       String buffName = buff['name'] as String;
+      String buffIcon = buffName.split(' ')[0];
       TextPainter tp = TextPainter(
-        text: TextSpan(text: buffName.split(' ')[0], style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+        text: TextSpan(
+          text: buffIcon,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         textDirection: TextDirection.ltr,
       );
       tp.layout();
       tp.paint(canvas, Offset(x - tp.width / 2, y - tp.height / 2));
     }
     
-    // MOEDAS
+    // ==================== MOEDAS ====================
     Paint coinPaint = Paint()..color = Colors.amber;
     for (var coin in coins) {
       double x = (coin['x'] + 1) / 2 * gameWidth;
@@ -76,7 +108,7 @@ class GamePainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), gameWidth / 45, coinDetailPaint);
     }
     
-    // OBSTÁCULOS
+    // ==================== OBSTÁCULOS ====================
     Paint obstaclePaint = Paint()..color = Colors.red;
     for (var obstacle in obstacles) {
       double x = (obstacle['x'] + 1) / 2 * gameWidth;
@@ -90,13 +122,13 @@ class GamePainter extends CustomPainter {
       );
     }
     
-    // ==================== CARRO COM SPRITE ====================
+    // ==================== CARRO ====================
     double carWidth = gameWidth / 5;
     double carHeight = gameHeight / 4;
     double carY = gameHeight - carHeight - 15;
     double carCenterX = (carX + 1) / 2 * gameWidth;
     
-    // Efeitos visuais
+    // Efeitos dos buffs no carro
     if (hasShield) {
       Paint shieldPaint = Paint()..color = Colors.orange.withOpacity(0.5);
       canvas.drawCircle(Offset(carCenterX, carY + carHeight / 2), gameWidth / 4.5, shieldPaint);
@@ -125,33 +157,42 @@ class GamePainter extends CustomPainter {
       }
     }
     
-    // CARREGAR E DESENHAR A IMAGEM DO SPRITE
-    try {
-      final ImageProvider image = AssetImage(carImagePath);
-      final ImageStream stream = image.resolve(ImageConfiguration.empty);
-      
-      // Usar ImageStreamListener para carregar a imagem
-      stream.addListener(ImageStreamListener((info, _) {
-        canvas.drawImageRect(
-          info.image,
-          Rect.fromLTWH(0, 0, info.image.width.toDouble(), info.image.height.toDouble()),
-          Rect.fromCenter(
-            center: Offset(carCenterX, carY + carHeight / 2),
-            width: carWidth,
-            height: carHeight,
-          ),
-          Paint(),
-        );
-      }));
-    } catch (e) {
-      // FALLBACK: Se a imagem não carregar, desenha um carro colorido
-      Paint fallbackPaint = Paint()..color = carColor;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset(carCenterX, carY + carHeight / 2), width: carWidth, height: carHeight),
-          const Radius.circular(8),
+    // Tenta carregar a imagem
+    _loadImage();
+    
+    // Desenha a sprite OU fallback
+    if (_cachedPath == carImagePath && _cachedImage != null) {
+      // DESENHA A SPRITE
+      canvas.drawImageRect(
+        _cachedImage!.image,
+        Rect.fromLTWH(0, 0, 
+          _cachedImage!.image.width.toDouble(), 
+          _cachedImage!.image.height.toDouble()),
+        Rect.fromCenter(
+          center: Offset(carCenterX, carY + carHeight / 2),
+          width: carWidth,
+          height: carHeight,
         ),
-        fallbackPaint,
+        Paint(),
+      );
+    } else {
+      // FALLBACK: ÍCONE DO FLUTTER
+      final TextPainter fallbackIcon = TextPainter(
+        text: TextSpan(
+          text: String.fromCharCode(Icons.directions_car.codePoint),
+          style: TextStyle(
+            fontFamily: Icons.directions_car.fontFamily,
+            package: Icons.directions_car.fontPackage,
+            fontSize: carHeight * 0.7,
+            color: carColor,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      fallbackIcon.layout();
+      fallbackIcon.paint(
+        canvas,
+        Offset(carCenterX - fallbackIcon.width / 2, carY + carHeight / 2 - fallbackIcon.height / 2),
       );
     }
     

@@ -1,6 +1,7 @@
-import 'package:carros/widgets/game_constants.dart';
+import 'package:carros/widgets/game_constants.dart' show GameConstants;
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'game_constants.dart';
 import 'game_screen.dart';
 import 'shop_screen.dart';
 
@@ -52,8 +53,7 @@ class _MenuScreenState extends State<MenuScreen> {
       });
     }
     
-    // PEGA O CAMINHO DA IMAGEM DO CARRO SELECIONADO
-    String imagePath = GameConstants.cars[_selectedCarIndex]['image'] ?? 'assets/sprite/Carte-carro-1.png';
+    String imagePath = GameConstants.cars[_selectedCarIndex]['image'] ?? 'assets/sprite/Corte-carro-1.png';
     
     Navigator.push(
       context,
@@ -63,7 +63,7 @@ class _MenuScreenState extends State<MenuScreen> {
           difficulty: _difficulty,
           gameConfig: GameConstants.difficulties[_difficulty]!,
           carColor: GameConstants.cars[_selectedCarIndex]['color'] as Color,
-          carImagePath: imagePath,  // PASSA O CAMINHO DA IMAGEM
+          carImagePath: imagePath,
           onGameEnd: (coins) {
             _updateCoins(coins);
           },

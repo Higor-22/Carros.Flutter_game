@@ -1,9 +1,10 @@
-import 'package:carros/widgets/game_constants.dart';
+import 'package:carros/widgets/game_constants.dart' show GameConstants;
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'dart:async';
 import 'package:flutter/services.dart';
 import '../widgets/game_painter.dart';
+import 'game_constants.dart';
 
 class GameScreen extends StatefulWidget {
   final String playerName;
@@ -102,7 +103,7 @@ class _GameScreenState extends State<GameScreen> {
       }
     });
     
-    buffTimer = Timer.periodic(const Duration(seconds: 7), (timer) {
+    buffTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
       if (!isGameOver) {
         addBuff();
       }
@@ -124,8 +125,10 @@ class _GameScreenState extends State<GameScreen> {
 
     for (var o in obstacles) { o['y'] = (o['y'] as double) + currentSpeed; }
     obstacles.removeWhere((o) => o['y'] > 1.0);
+    
     for (var c in coins) { c['y'] = (c['y'] as double) + currentSpeed; }
     coins.removeWhere((c) => c['y'] > 1.0);
+    
     for (var b in buffs) { b['y'] = (b['y'] as double) + currentSpeed; }
     buffs.removeWhere((b) => b['y'] > 1.0);
 
@@ -157,8 +160,22 @@ class _GameScreenState extends State<GameScreen> {
   void addBuff() {
     int idx = random.nextInt(GameConstants.buffs.length);
     var buff = GameConstants.buffs[idx];
+    
+    double newX;
+    bool ok;
+    int attempts = 0;
+    do {
+      ok = true;
+      newX = (random.nextDouble() - 0.5) * 1.6;
+      for (var o in obstacles) {
+        if (((o['x'] as double) - newX).abs() < 0.3 && (o['y'] as double) > -0.4) { ok = false; break; }
+      }
+      attempts++;
+      if (attempts > 20) break;
+    } while (!ok);
+    
     buffs.add({
-      'x': (random.nextDouble() - 0.5) * 1.6,
+      'x': newX,
       'y': -0.8,
       'type': idx,
       'name': buff['name'],
@@ -363,7 +380,6 @@ class _GameScreenState extends State<GameScreen> {
             color: Colors.black,
             child: Column(
               children: [
-                // HEADER
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   color: Colors.grey[900],
@@ -377,6 +393,7 @@ class _GameScreenState extends State<GameScreen> {
                           if (hasShield) const Icon(Icons.shield, color: Colors.orange, size: 12),
                           if (isImmune) const Icon(Icons.bolt, color: Colors.purple, size: 12),
                           if (doubleScore) const Icon(Icons.star, color: Colors.amber, size: 12),
+                          //if (hasMagnet) const Icon(Icons.magnet, color: Colors.brown, size: 12),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -398,7 +415,6 @@ class _GameScreenState extends State<GameScreen> {
                     ],
                   ),
                 ),
-                // ÁREA DO JOGO
                 Expanded(
                   child: CustomPaint(
                     painter: GamePainter(
@@ -408,7 +424,7 @@ class _GameScreenState extends State<GameScreen> {
                       buffs: buffs,
                       isGameOver: isGameOver,
                       carColor: widget.carColor,
-                      carImagePath: widget.carImagePath,  // ← PASSA O CAMINHO DA IMAGEM
+                      carImagePath: widget.carImagePath,
                       hasShield: hasShield,
                       isImmune: isImmune,
                       doubleScore: doubleScore,
@@ -418,7 +434,6 @@ class _GameScreenState extends State<GameScreen> {
                     size: Size.infinite,
                   ),
                 ),
-                // CONTROLES
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   color: Colors.grey[900],
